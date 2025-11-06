@@ -12,7 +12,7 @@
 - 🔥 **热重载**：通过 Mihomo API 热重载配置，0 停机时间
 - 🌍 **环境变量配置**：符合 12-Factor 原则，所有配置通过环境变量管理
 - 📦 **开箱即用**：一条命令启动，自动初始化配置
-- 🏥 **健康检查**：内置健康检查，自动重启故���容器
+- 🏥 **健康检查**：内置健康检查，自动重启故障容器
 - 💾 **配置持久化**：自动备份配置文件，支持回滚
 - 🔒 **安全可靠**：日志中自动屏蔽敏感信息
 - 🚀 **多架构支持**：支持 amd64 和 arm64 架构
@@ -30,13 +30,12 @@
 
 ```bash
 docker run -d \
-  --name mihomo-auto \
+  --name mihome-enhance \
   -e SUBSCRIBE_URL="https://your-subscription-url" \
-  -v mihomo-data:/data \
   -p 7890:7890 \
   -p 9090:9090 \
   --restart unless-stopped \
-  ghcr.io/YOUR_USERNAME/mihomo-auto:latest
+  ghcr.io/YOUR_USERNAME/mihome-enhance:latest
 ```
 
 ### 方式 2：Docker Compose（推荐生产使用）
@@ -48,17 +47,15 @@ version: '3.8'
 
 services:
   mihomo:
-    image: ghcr.io/YOUR_USERNAME/mihomo-auto:latest
-    container_name: mihomo-auto
+    image: ghcr.io/YOUR_USERNAME/mihome-enhance:latest
+    container_name: mihome-enhance
     restart: unless-stopped
     environment:
       - SUBSCRIBE_URL=https://your-subscription-url
-      - UPDATE_INTERVAL=3600
+      - UPDATE_INTERVAL=28800
       - START_PORT=42000
-      - API_SECRET=wangzh
+      - API_SECRET=123456
       - TZ=Asia/Shanghai
-    volumes:
-      - ./data:/data
     ports:
       - "7890:7890"
       - "9090:9090"
@@ -89,9 +86,9 @@ docker-compose logs -f mihomo
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
 | `WORKER_URL` | - | Workers 转换服务地址（如果使用） |
-| `UPDATE_INTERVAL` | `3600` | 更新间隔（秒）|
+| `UPDATE_INTERVAL` | `28800` | 更新间隔（秒，默认8小时）|
 | `START_PORT` | `42000` | Socks5 起始端口 |
-| `API_SECRET` | `wangzh` | Mihomo API 密钥 |
+| `API_SECRET` | `123456` | Mihomo API 密钥 |
 | `AUTH_USER` | - | Socks5 认证用户名 |
 | `AUTH_PASS` | - | Socks5 认证密码 |
 | `CONFIG_NAME` | - | 自定义配置名称 |
@@ -103,21 +100,20 @@ docker-compose logs -f mihomo
 
 ```bash
 docker run -d \
-  --name mihomo-auto \
+  --name mihome-enhance \
   -e SUBSCRIBE_URL="https://your-subscription-url" \
   -e WORKER_URL="https://your-worker.workers.dev" \
-  -e UPDATE_INTERVAL=3600 \
+  -e UPDATE_INTERVAL=28800 \
   -e START_PORT=42000 \
   -e API_SECRET="your-secret" \
   -e AUTH_USER="user" \
   -e AUTH_PASS="pass" \
   -e CONFIG_NAME="my-config" \
   -e TZ="Asia/Shanghai" \
-  -v mihomo-data:/data \
   -p 7890:7890 \
   -p 9090:9090 \
   --restart unless-stopped \
-  ghcr.io/YOUR_USERNAME/mihomo-auto:latest
+  ghcr.io/YOUR_USERNAME/mihome-enhance:latest
 ```
 
 ## 🔧 常用命令
@@ -126,59 +122,49 @@ docker run -d \
 
 ```bash
 # 查看运行状态
-docker ps | grep mihomo-auto
+docker ps | grep mihome-enhance
 
 # 查看健康状态
-docker inspect --format='{{.State.Health.Status}}' mihomo-auto
+docker inspect --format='{{.State.Health.Status}}' mihome-enhance
 
 # 查看资源使用
-docker stats mihomo-auto
+docker stats mihome-enhance
 ```
 
 ### 查看日志
 
 ```bash
 # 实时日志
-docker logs -f mihomo-auto
+docker logs -f mihome-enhance
 
 # 最近 100 行
-docker logs --tail 100 mihomo-auto
+docker logs --tail 100 mihome-enhance
 
 # 查看时间戳
-docker logs -t mihomo-auto
+docker logs -t mihome-enhance
 ```
 
 ### 配置管理
 
 ```bash
 # 手动触发更新
-docker exec mihomo-auto /usr/local/bin/update-config.sh
+docker exec mihome-enhance /usr/local/bin/update-config.sh
 
 # 查看当前配置
-docker exec mihomo-auto cat /data/config.yaml
-
-# 查看备份列表
-docker exec mihomo-auto ls -lh /data/backups/
-
-# 恢复特定备份
-docker exec mihomo-auto cp /data/backups/config-20240101-120000.yaml /data/config.yaml
-docker restart mihomo-auto
+docker exec mihome-enhance cat /data/config.yaml
 ```
 
 ### 容器管理
 
 ```bash
 # 重启容器
-docker restart mihomo-auto
+docker restart mihome-enhance
 
 # 停止容器
-docker stop mihomo-auto
+docker stop mihome-enhance
 
-# 删除容器（保留数据）
-docker rm mihomo-auto
-
-# 删除容器和数据
-docker rm -v mihomo-auto
+# 删除容器
+docker rm mihome-enhance
 ```
 
 ## 📡 API 使用
@@ -197,7 +183,7 @@ Authorization: Bearer your-secret
 
 ```bash
 # API 密钥
-API_SECRET="wangzh"
+API_SECRET="123456"
 
 # 查看版本信息
 curl -H "Authorization: Bearer ${API_SECRET}" \
@@ -235,7 +221,7 @@ curl -X PUT \
 1. 检查环境变量是否正确设置
 
 ```bash
-docker logs mihomo-auto | grep "ERROR"
+docker logs mihome-enhance | grep "ERROR"
 ```
 
 2. 验证订阅地址是否可访问
@@ -260,19 +246,19 @@ sudo lsof -i :9090
 1. 检查订阅地址是否有效
 
 ```bash
-docker exec mihomo-auto curl -I "$SUBSCRIBE_URL"
+docker exec mihome-enhance curl -I "$SUBSCRIBE_URL"
 ```
 
 2. 查看详细错误日志
 
 ```bash
-docker logs mihomo-auto | grep "UPDATE-CONFIG"
+docker logs mihome-enhance | grep "UPDATE-CONFIG"
 ```
 
 3. 手动触发更新并观察
 
 ```bash
-docker exec -it mihomo-auto /usr/local/bin/update-config.sh
+docker exec -it mihome-enhance /usr/local/bin/update-config.sh
 ```
 
 ### API 无法访问
@@ -284,21 +270,21 @@ docker exec -it mihomo-auto /usr/local/bin/update-config.sh
 1. 检查端口映射
 
 ```bash
-docker port mihomo-auto
+docker port mihome-enhance
 ```
 
 2. 验证 API 密钥
 
 ```bash
 # 查看容器环境变量
-docker exec mihomo-auto env | grep API_SECRET
+docker exec mihome-enhance env | grep API_SECRET
 ```
 
 3. 测试 API 连接
 
 ```bash
-docker exec mihomo-auto curl -f http://localhost:9090/version \
-  -H "Authorization: Bearer wangzh"
+docker exec mihome-enhance curl -f http://localhost:9090/version \
+  -H "Authorization: Bearer 123456"
 ```
 
 ### 节点无法连接
@@ -310,19 +296,19 @@ docker exec mihomo-auto curl -f http://localhost:9090/version \
 1. 检查配置文件
 
 ```bash
-docker exec mihomo-auto cat /data/config.yaml | grep -A 5 "listeners:"
+docker exec mihome-enhance cat /data/config.yaml | grep -A 5 "listeners:"
 ```
 
 2. 验证 Mihomo 进程
 
 ```bash
-docker exec mihomo-auto ps aux | grep mihomo
+docker exec mihome-enhance ps aux | grep mihomo
 ```
 
 3. 重启容器
 
 ```bash
-docker restart mihomo-auto
+docker restart mihome-enhance
 ```
 
 ## 🏗️ 项目结构
@@ -359,7 +345,7 @@ cd mihomo-wok
 
 ```bash
 # 构建镜像
-docker build -t mihomo-auto:local .
+docker build -t mihome-enhance:local .
 
 # 测试运行
 docker run -d \
@@ -367,7 +353,7 @@ docker run -d \
   -e SUBSCRIBE_URL="https://your-url" \
   -p 7890:7890 \
   -p 9090:9090 \
-  mihomo-auto:local
+  mihome-enhance:local
 ```
 
 ### 4. 推送到 GitHub

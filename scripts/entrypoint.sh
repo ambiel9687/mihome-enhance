@@ -101,15 +101,6 @@ generate_initial_config() {
     fi
   else
     log "ℹ️  检测到已存在配置文件，跳过初始化"
-    log "   配置路径: $CONFIG_FILE"
-
-    # 显示配置文件信息
-    if [ -f "$CONFIG_FILE" ]; then
-      local size=$(stat -f%z "$CONFIG_FILE" 2>/dev/null || stat -c%s "$CONFIG_FILE")
-      local mod_time=$(stat -f%Sm -t '%Y-%m-%d %H:%M:%S' "$CONFIG_FILE" 2>/dev/null || stat -c%y "$CONFIG_FILE" | cut -d'.' -f1)
-      log "   文��大小: ${size} bytes"
-      log "   修改时间: ${mod_time}"
-    fi
   fi
 }
 

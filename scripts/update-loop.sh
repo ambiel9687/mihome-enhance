@@ -52,7 +52,7 @@ format_duration() {
 # ==================== 主循环 ====================
 main() {
   # 获取配置
-  local update_interval="${UPDATE_INTERVAL:-3600}"
+  local update_interval="${UPDATE_INTERVAL:-28800}"
   local initial_delay="${INITIAL_UPDATE_DELAY:-300}"
 
   log "=========================================="

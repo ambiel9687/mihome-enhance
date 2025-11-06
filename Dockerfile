@@ -3,10 +3,6 @@
 
 FROM metacubex/mihomo:latest
 
-LABEL org.opencontainers.image.title="Mihomo Auto-Update" \
-      org.opencontainers.image.description="Mihomo with automatic subscription update support" \
-      org.opencontainers.image.authors="Your Name" \
-      org.opencontainers.image.source="https://github.com/YOUR_USERNAME/mihomo-wok"
 
 # 安装必要工具
 # - curl: 用于下载订阅配置
@@ -34,9 +30,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
 # 核心配置
 ENV SUBSCRIBE_URL="" \
     WORKER_URL="" \
-    UPDATE_INTERVAL=3600 \
+    UPDATE_INTERVAL=28800 \
     START_PORT=42000 \
-    API_SECRET="wangzh"
+    API_SECRET="123456"
 
 # 可选配置
 ENV AUTH_USER="" \
@@ -48,19 +44,17 @@ ENV AUTH_USER="" \
 # Mihomo API 配置
 ENV MIHOMO_API="http://localhost:9090"
 
-# 创建数据目录
-RUN mkdir -p /data /data/backups
+# 创建配置目录（容器内临时存储）
+RUN mkdir -p /data
 
 # 设置工作目录
 WORKDIR /data
 
-# 数据持久化卷
-VOLUME ["/data"]
-
 # 暴露端口
 # 7890: Mixed (HTTP + SOCKS5) 代理端口
 # 9090: Mihomo RESTful API 端口
-EXPOSE 7890 9090
+# 42000-42100: Socks5 代理端口范围（一节点一端口）
+EXPOSE 7890 9090 42000-42100
 
 # 健康检查
 # 每30秒检查一次 Mihomo API 是否响应

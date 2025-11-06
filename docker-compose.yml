@@ -9,8 +9,8 @@ version: '3.8'
 services:
   mihomo:
     # 镜像配置
-    image: ghcr.io/YOUR_USERNAME/mihomo-auto:latest
-    container_name: mihomo-auto
+    image: ghcr.io/YOUR_USERNAME/mihome-enhance:latest
+    container_name: mihome-enhance
     hostname: mihomo
 
     # 重启策略
@@ -26,14 +26,14 @@ services:
       # Workers 转换服务地址（如果使用自己的转换服务）
       # - WORKER_URL=https://your-worker.workers.dev
 
-      # 更新间隔（秒），默认 3600（1小时）
-      - UPDATE_INTERVAL=3600
+      # 更新间隔（秒），默认 28800（8小时）
+      - UPDATE_INTERVAL=28800
 
       # Socks5 起始端口，默认 42000
       - START_PORT=42000
 
-      # Mihomo API 密钥，默认 "wangzh"
-      - API_SECRET=wangzh
+      # Mihomo API 密钥，默认 "123456"
+      - API_SECRET=123456
 
       # Socks5 认证（可选）
       # - AUTH_USER=your_username
@@ -63,21 +63,13 @@ services:
       # 例如：起始端口 42000，有 10 个节点
       # - "42000-42009:42000-42009"
 
-    # 数据持久化
-    volumes:
-      # 配置文件和备份存储
-      - mihomo-data:/data
-
-      # 或使用本地目录（取消下面的注释并注释上面的）
-      # - ./data:/data
-
     # 网络配置
     # networks:
     #   - mihomo-network
 
     # 健康检查
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9090/version", "-H", "Authorization: Bearer wangzh"]
+      test: ["CMD", "curl", "-f", "http://localhost:9090/version", "-H", "Authorization: Bearer 123456"]
       interval: 30s
       timeout: 3s
       start_period: 10s
@@ -99,16 +91,6 @@ services:
     #     reservations:
     #       cpus: '0.5'
     #       memory: 256M
-
-# 数据卷定义
-volumes:
-  mihomo-data:
-    driver: local
-    # 可选：指定数据卷存储位置
-    # driver_opts:
-    #   type: none
-    #   device: /path/to/data
-    #   o: bind
 
 # 网络定义（如果需要）
 # networks:

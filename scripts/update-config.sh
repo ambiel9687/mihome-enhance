@@ -12,13 +12,11 @@ set -euo pipefail
 # ==================== 配置常量 ====================
 CONFIG_FILE="/data/config.yaml"
 TEMP_FILE="/tmp/mihomo-config-$$.yaml"
-BACKUP_DIR="/data/backups"
-MAX_BACKUPS=3
 LOG_PREFIX="[UPDATE-CONFIG]"
 
 # Mihomo API 配置
 MIHOMO_API="${MIHOMO_API:-http://localhost:9090}"
-API_SECRET="${API_SECRET:-wangzh}"
+API_SECRET="${API_SECRET:-123456}"
 
 # ==================== 日志函数 ====================
 log() {
@@ -196,39 +194,6 @@ check_if_changed() {
   return 0
 }
 
-# ==================== 备份当前配置 ====================
-backup_current() {
-  if [ ! -f "$CONFIG_FILE" ]; then
-    log "ℹ️  无需备份（首次配置）"
-    return 0
-  fi
-
-  log "💾 备份当前配置..."
-
-  # 创建备份目录
-  mkdir -p "$BACKUP_DIR"
-
-  # 生成备份文件名（带时间戳）
-  local timestamp=$(date '+%Y%m%d-%H%M%S')
-  local backup_file="${BACKUP_DIR}/config-${timestamp}.yaml"
-
-  # 复制配置文件
-  cp "$CONFIG_FILE" "$backup_file"
-
-  log_success "备份完成"
-  log "   备份文件: $(basename $backup_file)"
-
-  # 清理旧备份（保留最近 N 个）
-  local backup_count=$(ls -1 "${BACKUP_DIR}"/config-*.yaml 2>/dev/null | wc -l)
-  if [ "$backup_count" -gt "$MAX_BACKUPS" ]; then
-    local to_delete=$((backup_count - MAX_BACKUPS))
-    log "   清理旧备份: ${to_delete} 个文件"
-    ls -t "${BACKUP_DIR}"/config-*.yaml | tail -n "+$((MAX_BACKUPS + 1))" | xargs -r rm
-  fi
-
-  return 0
-}
-
 # ==================== 应用新配置 ====================
 apply_config() {
   log "🔄 应用新配置..."
@@ -260,31 +225,6 @@ apply_config() {
     log_error "API 重载失败"
     log_error "   HTTP状态: $http_code"
     log_error "   API地址: $MIHOMO_API"
-    return 1
-  fi
-}
-
-# ==================== 回滚配置 ====================
-rollback_config() {
-  log_error "配置应用失败，正在回滚..."
-
-  # 查找最新的备份文件
-  local latest_backup=$(ls -t "${BACKUP_DIR}"/config-*.yaml 2>/dev/null | head -n 1)
-
-  if [ -z "$latest_backup" ]; then
-    log_error "未找到备份文件，无法回滚"
-    return 1
-  fi
-
-  log "   恢复备份: $(basename $latest_backup)"
-  cp "$latest_backup" "$CONFIG_FILE"
-
-  # 重新加载旧配置
-  if apply_config; then
-    log_success "已回滚到之前的配置"
-    return 0
-  else
-    log_error "回滚失败，请手动检查配置"
     return 1
   fi
 }
@@ -338,18 +278,13 @@ main() {
     return 0  # 无变化但不是错误
   fi
 
-  # 步骤4: 备份当前配置
-  backup_current
-
-  # 步骤5: 应用新配置
+  # 步骤4: 应用新配置
   if ! apply_config; then
-    # 应用失败，尝试回滚
-    rollback_config
     log_error "❌ 更新失败：配置应用错误"
     return 1
   fi
 
-  # 步骤6: 健康检查
+  # 步骤5: 健康检查
   if ! verify_health; then
     log_error "⚠️  健康检查失败，但配置已应用"
     log_error "   请检查 Mihomo 日志排查问题"
