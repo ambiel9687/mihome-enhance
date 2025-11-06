@@ -1,0 +1,41 @@
+# Environment variables
+.env
+
+# Data directory
+data/
+*.yaml
+*.yml
+!docker-compose.yml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+# Docker
+.dockerignore
+
+# Backup files
+backups/
+*.backup
