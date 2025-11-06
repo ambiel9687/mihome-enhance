@@ -1,0 +1,119 @@
+# Docker Compose 配置 - Mihomo 自动更新
+# 使用说明：
+# 1. 复制此文件到您的项目目录
+# 2. 根据需要修改环境变量
+# 3. 运行: docker-compose up -d
+
+version: '3.8'
+
+services:
+  mihomo:
+    # 镜像配置
+    image: ghcr.io/YOUR_USERNAME/mihomo-auto:latest
+    container_name: mihomo-auto
+    hostname: mihomo
+
+    # 重启策略
+    restart: unless-stopped
+
+    # 环境变量配置
+    environment:
+      # ===== 必需配置 =====
+      # 订阅地址（必填）
+      - SUBSCRIBE_URL=https://your-subscription-url-here
+
+      # ===== 可选配置 =====
+      # Workers 转换服务地址（如果使用自己的转换服务）
+      # - WORKER_URL=https://your-worker.workers.dev
+
+      # 更新间隔（秒），默认 3600（1小时）
+      - UPDATE_INTERVAL=3600
+
+      # Socks5 起始端口，默认 42000
+      - START_PORT=42000
+
+      # Mihomo API 密钥，默认 "wangzh"
+      - API_SECRET=wangzh
+
+      # Socks5 认证（可选）
+      # - AUTH_USER=your_username
+      # - AUTH_PASS=your_password
+
+      # 自定义配置名称（可选）
+      # - CONFIG_NAME=my-config
+
+      # 日志级别：debug, info, warning, error
+      - LOG_LEVEL=info
+
+      # 首次更新延迟（秒），默认 300（5分钟）
+      - INITIAL_UPDATE_DELAY=300
+
+      # 时区设置
+      - TZ=Asia/Shanghai
+
+    # 端口映射
+    ports:
+      # Mixed 代理端口（HTTP + SOCKS5）
+      - "7890:7890"
+
+      # Mihomo RESTful API 端口
+      - "9090:9090"
+
+      # 如果需要映射多个 Socks5 端口，根据节点数量添加
+      # 例如：起始端口 42000，有 10 个节点
+      # - "42000-42009:42000-42009"
+
+    # 数据持久化
+    volumes:
+      # 配置文件和备份存储
+      - mihomo-data:/data
+
+      # 或使用本地目录（取消下面的注释并注释上面的）
+      # - ./data:/data
+
+    # 网络配置
+    # networks:
+    #   - mihomo-network
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/version", "-H", "Authorization: Bearer wangzh"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # 资源限制（可选）
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1.0'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 256M
+
+# 数据卷定义
+volumes:
+  mihomo-data:
+    driver: local
+    # 可选：指定数据卷存储位置
+    # driver_opts:
+    #   type: none
+    #   device: /path/to/data
+    #   o: bind
+
+# 网络定义（如果需要）
+# networks:
+#   mihomo-network:
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.20.0.0/16
