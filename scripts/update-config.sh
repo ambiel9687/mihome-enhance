@@ -83,10 +83,13 @@ download_config() {
   log "📥 开始下载配置..."
   log "   URL: ${safe_url:0:80}..."
 
+  # 打印完整的 curl 命令（方便测试连通性）
+  log "   测试命令: curl -I -L -H 'User-Agent: clash.meta/v1.19.13' '${safe_url}'"
+
   # 使用 curl 下载，支持重定向，30秒超时
   local http_code=$(curl -w "%{http_code}" -o "$TEMP_FILE" \
     -f -s -L -m 30 \
-    -H "User-Agent: mihomo-auto-update/1.0" \
+    -H "User-Agent: clash.meta/v1.19.13" \
     "$url" 2>/dev/null || echo "000")
 
   if [ "$http_code" = "200" ]; then
