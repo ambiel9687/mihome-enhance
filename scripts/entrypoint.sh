@@ -39,7 +39,14 @@ setup_hosts() {
     echo "172.64.229.77 s5.wook.qzz.io" >> /etc/hosts
     log_success "已添加 hosts 条目: 172.64.229.77 s5.wook.qzz.io"
   else
-    log "ℹ️  hosts 条目已存在，跳过"
+    log "ℹ️  hosts 条目 s5.wook.qzz.io 已存在，跳过"
+  fi
+
+  if ! grep -q "url.888529.xyz" /etc/hosts; then
+    echo "172.64.229.77 url.888529.xyz" >> /etc/hosts
+    log_success "已添加 hosts 条目: 172.64.229.77 url.888529.xyz"
+  else
+    log "ℹ️  hosts 条目 url.888529.xyz 已存在，跳过"
   fi
 }
 
