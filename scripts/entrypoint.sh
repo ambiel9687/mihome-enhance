@@ -11,7 +11,7 @@ set -euo pipefail
 
 # ==================== 配置常量 ====================
 CONFIG_FILE="/data/config.yaml"
-LOG_PREFIX="[MIHOMO-AUTO]"
+LOG_PREFIX="[MIHOMO-ENHANCE]"
 
 # ==================== 日志函数 ====================
 log() {
@@ -83,7 +83,7 @@ validate_environment() {
     log_error ""
     log_error "使用方法："
     log_error "  docker run -e SUBSCRIBE_URL=https://your-subscription-url \\"
-    log_error "             ghcr.io/your-username/mihomo-auto:latest"
+    log_error "             ghcr.io/your-username/mihomo-enhance:latest"
     log_error ""
     exit 1
   fi
@@ -183,7 +183,7 @@ start_mihomo() {
   log "🌐 启动 Mihomo 核心..."
 
   # 后台启动 mihomo
-  mihomo -f "$CONFIG_FILE" &
+  /mihomo -f "$CONFIG_FILE" &
   MIHOMO_PID=$!
 
   # 等待 Mihomo 启动
