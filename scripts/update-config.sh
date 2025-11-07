@@ -39,39 +39,21 @@ trap cleanup EXIT
 
 # ==================== 构建下载 URL ====================
 build_download_url() {
-  local base_url="${WORKER_URL}"
-
-  # 如果没有设置 WORKER_URL，直接使用 SUBSCRIBE_URL
-  if [ -z "$base_url" ]; then
-    echo "$SUBSCRIBE_URL"
-    return
-  fi
-
-  # 编码订阅 URL（使用 base64）
-  local encoded_url=$(echo -n "$SUBSCRIBE_URL" | base64 | tr -d '\n')
-
-  # 构建完整 URL
-  local url="${base_url}/api/subscribe?url=${encoded_url}&port=${START_PORT}"
-
-  # 添加认证信息（如果设置）
-  if [ -n "${AUTH_USER:-}" ] && [ -n "${AUTH_PASS:-}" ]; then
-    local auth_str="${AUTH_USER}:${AUTH_PASS}"
-    local encoded_auth=$(echo -n "$auth_str" | base64 | tr -d '\n')
-    url="${url}&auth=${encoded_auth}"
-  fi
-
-  # 添加自定义文件名（如果设置）
-  if [ -n "${CONFIG_NAME:-}" ]; then
-    url="${url}&filename=${CONFIG_NAME}"
-  fi
-
-  echo "$url"
+  # 直接使用 SUBSCRIBE_URL（已经是处理好的订阅地址）
+  echo "$SUBSCRIBE_URL"
 }
 
 # ==================== 隐藏敏感信息 ====================
 sanitize_url_for_log() {
   local url="$1"
-  # 替换 URL 中的敏感参数
+
+  # 如果设置了 SHOW_FULL_URL=true，则显示完整URL（用于调试）
+  if [ "${SHOW_FULL_URL:-false}" = "true" ]; then
+    echo "$url"
+    return
+  fi
+
+  # 否则替换 URL 中的敏感参数
   echo "$url" | sed 's/token=[^&]*/token=***/g; s/auth=[^&]*/auth=***/g; s/password=[^&]*/password=***/g'
 }
 
@@ -79,18 +61,33 @@ sanitize_url_for_log() {
 download_config() {
   local url=$(build_download_url)
   local safe_url=$(sanitize_url_for_log "$url")
+  local full_url="$url"  # 保留完整URL用于实际请求
 
   log "📥 开始下载配置..."
-  log "   URL: ${safe_url}..."
+  log "   请求URL: ${safe_url}"
 
-  # 打印完整的 curl 命令（方便测试连通性）
-  log "   测试命令: curl -I -L -H 'User-Agent: clash.meta/v1.19.13' '${safe_url}'"
+  # 打印完整的 curl 测试命令（用于调试）
+  if [ "${SHOW_FULL_URL:-false}" = "true" ]; then
+    log "   测试命令: curl -v -I -L -H 'User-Agent: clash.meta/v1.19.13' '${full_url}'"
+  else
+    log "   测试命令: curl -v -I -L -H 'User-Agent: clash.meta/v1.19.13' '${safe_url}'"
+  fi
 
-  # 使用 curl 下载，支持重定向，30秒超时
+  # 创建临时文件存储错误信息
+  local error_file="/tmp/curl-error-$$.txt"
+
+  # 使用 curl 下载，支持重定向，60秒超时
   local http_code=$(curl -w "%{http_code}" -o "$TEMP_FILE" \
     -f -s -L -m 60 \
     -H "User-Agent: clash.meta/v1.19.13" \
-    "$url" 2>/dev/null || echo "000")
+    "$full_url" 2>"$error_file" || echo "000")
+
+  # 读取错误信息
+  local error_msg=""
+  if [ -f "$error_file" ]; then
+    error_msg=$(cat "$error_file")
+    rm -f "$error_file"
+  fi
 
   if [ "$http_code" = "200" ]; then
     local size=$(stat -f%z "$TEMP_FILE" 2>/dev/null || stat -c%s "$TEMP_FILE")
@@ -103,7 +100,47 @@ download_config() {
     return 1
   else
     log_error "下载失败"
-    log_error "   HTTP状态: $http_code"
+    log_error "   HTTP状态码: $http_code"
+
+    # 输出详细错误信息
+    if [ -n "$error_msg" ]; then
+      log_error "   错误详情: $error_msg"
+    fi
+
+    # 根据HTTP状态码给出具体原因
+    case "$http_code" in
+      000)
+        log_error "   失败原因: 无法连接到服务器（网络问题或域名解析失败）"
+        log_error "   建议: 1) 检查网络连接 2) 检查DNS解析 3) 检查防火墙设置"
+        ;;
+      400)
+        log_error "   失败原因: 请求参数错误（400 Bad Request）"
+        log_error "   建议: 检查订阅URL和参数是否正确"
+        ;;
+      401|403)
+        log_error "   失败原因: 认证失败或无权限（$http_code）"
+        log_error "   建议: 检查认证信息（AUTH_USER/AUTH_PASS）"
+        ;;
+      404)
+        log_error "   失败原因: 订阅地址不存在（404 Not Found）"
+        log_error "   建议: 检查SUBSCRIBE_URL是否正确"
+        ;;
+      500|502|503|504)
+        log_error "   失败原因: 服务器错误（$http_code）"
+        log_error "   建议: 稍后重试或联系订阅服务提供商"
+        ;;
+      *)
+        log_error "   失败原因: 未知错误"
+        ;;
+    esac
+
+    # 如果是DNS或连接错误，建议启用完整URL调试
+    if [ "$http_code" = "000" ] && [ "${SHOW_FULL_URL:-false}" != "true" ]; then
+      log_error ""
+      log_error "   💡 启用调试模式获取更多信息:"
+      log_error "      docker exec <container> sh -c 'SHOW_FULL_URL=true /usr/local/bin/update-config.sh'"
+    fi
+
     return 1
   fi
 }
@@ -141,11 +178,11 @@ validate_config() {
     return 1
   fi
 
-  # 检查 listeners 字段（我们生成的配置必须有）
-  if ! grep -q "^listeners:" "$TEMP_FILE"; then
-    log_error "配置文件缺少 'listeners:' 字段"
-    return 1
-  fi
+#   # 检查 listeners 字段（我们生成的配置必须有）
+#   if ! grep -q "^listeners:" "$TEMP_FILE"; then
+#     log_error "配置文件缺少 'listeners:' 字段"
+#     return 1
+#   fi
 
   # 统计节点数量
   local node_count=$(grep -c "^  - name:" "$TEMP_FILE" || echo "0")

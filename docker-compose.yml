@@ -19,13 +19,10 @@ services:
     # 环境变量配置
     environment:
       # ===== 必需配置 =====
-      # 订阅地址（必填）
+      # 订阅地址（必填）- 提供已处理好的订阅配置URL
       - SUBSCRIBE_URL=https://your-subscription-url-here
 
       # ===== 可选配置 =====
-      # Workers 转换服务地址（如果使用自己的转换服务）
-      # - WORKER_URL=https://your-worker.workers.dev
-
       # 更新间隔（秒），默认 28800（8小时）
       - UPDATE_INTERVAL=28800
 
@@ -50,6 +47,10 @@ services:
 
       # 时区设置
       - TZ=Asia/Shanghai
+
+      # 调试模式：显示完整URL（包含认证参数），用于排查网络问题
+      # 警告：启用后会在日志中显示敏感信息，仅用于调试
+      # - SHOW_FULL_URL=true
 
     # 端口映射
     ports:

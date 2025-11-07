@@ -109,13 +109,6 @@ print_startup_info() {
   log "=========================================="
   log "📋 配置信息："
   log "   订阅地址: ${SUBSCRIBE_URL:0:50}..."
-
-  if [ -n "$WORKER_URL" ]; then
-    log "   转换服务: ${WORKER_URL}"
-  else
-    log "   转换服务: 直接使用订阅地址"
-  fi
-
   log "   更新间隔: ${UPDATE_INTERVAL}秒 ($(($UPDATE_INTERVAL / 3600))小时)"
   log "   起始端口: ${START_PORT}"
   log "   API 密钥: ${API_SECRET:0:3}***"
