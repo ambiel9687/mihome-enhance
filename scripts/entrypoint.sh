@@ -115,9 +115,34 @@ generate_initial_config() {
     if /usr/local/bin/update-config.sh; then
       log_success "初始配置已生成"
     else
-      log_error "初始配置下载失败，请检查订阅地址是否正确"
-      log_error "订阅地址: ${SUBSCRIBE_URL:0:50}..."
-      exit 1
+      log_warning "初始配置下载失败"
+
+      # 检查是否设置了保底配置
+      if [ -n "${DEFAULT_CONFIG_YAML:-}" ]; then
+        log "🔄 使用保底配置启动..."
+
+        # 将保底配置写入配置文件
+        echo "$DEFAULT_CONFIG_YAML" > "$CONFIG_FILE"
+
+        # 验证配置文件是否创建成功
+        if [ -f "$CONFIG_FILE" ] && [ -s "$CONFIG_FILE" ]; then
+          log_success "保底配置已应用"
+          log "   配置文件: $CONFIG_FILE"
+          local size=$(stat -f%z "$CONFIG_FILE" 2>/dev/null || stat -c%s "$CONFIG_FILE")
+          log "   文件大小: ${size} bytes"
+        else
+          log_error "保底配置写入失败"
+          exit 1
+        fi
+      else
+        log_error "未设置 DEFAULT_CONFIG_YAML 环境变量，无法使用保底配置"
+        log_error "订阅地址: ${SUBSCRIBE_URL:0:50}..."
+        log_error ""
+        log_error "解决方案："
+        log_error "1. 检查网络连接和订阅地址是否正确"
+        log_error "2. 设置 DEFAULT_CONFIG_YAML 环境变量作为保底配置"
+        exit 1
+      fi
     fi
   else
     log "ℹ️  检测到已存在配置文件，跳过初始化"

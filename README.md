@@ -95,6 +95,7 @@ docker-compose logs -f mihomo
 | `LOG_LEVEL` | `info` | 日志级别 |
 | `INITIAL_UPDATE_DELAY` | `300` | 首次更新延迟（秒）|
 | `TZ` | `Asia/Shanghai` | 时区设置 |
+| `DEFAULT_CONFIG_YAML` | - | 保底配置（网络无法访问时使用）|
 
 ### 完整配置示例
 
@@ -260,6 +261,28 @@ docker logs mihome-enhance | grep "UPDATE-CONFIG"
 ```bash
 docker exec -it mihome-enhance /usr/local/bin/update-config.sh
 ```
+
+4. 使用保底配置（当网络无法访问时）
+
+```bash
+# 读取现有配置文件作为保底配置
+CONFIG_YAML=$(cat /path/to/config.yaml)
+
+# 使用保底配置启动容器
+docker run -d \
+  --name mihome-enhance \
+  -e SUBSCRIBE_URL="https://your-subscription-url" \
+  -e DEFAULT_CONFIG_YAML="$CONFIG_YAML" \
+  -p 7890:7890 \
+  -p 9090:9090 \
+  --restart unless-stopped \
+  ghcr.io/YOUR_USERNAME/mihome-enhance:latest
+```
+
+**保底配置说明**：
+- 首次启动时优先尝试从订阅地址下载配置
+- 如果下载失败且设置了 `DEFAULT_CONFIG_YAML`，将使用保底配置启动
+- 保底配置需要是完整的 Mihomo/Clash 配置文件内容
 
 ### API 无法访问
 

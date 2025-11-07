@@ -41,6 +41,9 @@ ENV AUTH_USER="" \
     INITIAL_UPDATE_DELAY=300 \
     TZ="Asia/Shanghai"
 
+# 保底配置（当网络无法访问订阅地址时使用）
+ENV DEFAULT_CONFIG_YAML=""
+
 # Mihomo API 配置
 ENV MIHOMO_API="http://localhost:9090"
 
