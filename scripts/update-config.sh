@@ -242,46 +242,53 @@ apply_config() {
   mv "$TEMP_FILE" "$CONFIG_FILE"
   log "   配置文件已更新: $CONFIG_FILE"
 
-  # 步骤2: 查找并终止旧进程
+  # 步骤2: 使用 API 重启 Mihomo
+  log "   通过 API 重启 Mihomo..."
+  local api_url="${MIHOMO_API}/restart"
+
+  # 调用重启 API
+  local http_code=$(curl -w "%{http_code}" -o /dev/null \
+    -X POST \
+    -f -s -m 10 \
+    -H "Authorization: Bearer ${API_SECRET}" \
+    "$api_url" 2>/dev/null || echo "000")
+
+  if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
+    log "   API 重启请求已发送"
+  else
+    log_error "   API 重启请求失败 (HTTP $http_code)"
+    log_error "   API地址: $api_url"
+
+    # 如果 API 重启失败，提供错误提示
+    case "$http_code" in
+      000)
+        log_error "   无法连接到 Mihomo API"
+        log_error "   建议: 检查 Mihomo 是否运行，MIHOMO_API 配置是否正确"
+        ;;
+      401|403)
+        log_error "   认证失败"
+        log_error "   建议: 检查 API_SECRET 是否与 Mihomo 配置一致"
+        ;;
+      *)
+        log_error "   未知错误"
+        ;;
+    esac
+    return 1
+  fi
+
+  # 步骤3: 等待重启完成
+  log "   等待重启完成..."
+  sleep 3
+
+  # 步骤4: 验证 Mihomo 进程是否运行
   local mihomo_pid=$(pgrep -f "^/mihomo" | head -n 1)
 
   if [ -n "$mihomo_pid" ]; then
-    log "   终止旧进程 (PID: $mihomo_pid)..."
-    kill -TERM "$mihomo_pid"
-
-    # 等待进程退出（最多5秒）
-    local timeout=5
-    while [ $timeout -gt 0 ] && kill -0 "$mihomo_pid" 2>/dev/null; do
-      sleep 1
-      timeout=$((timeout - 1))
-    done
-
-    # 如果还没退出，强制终止
-    if kill -0 "$mihomo_pid" 2>/dev/null; then
-      log "   强制终止进程..."
-      kill -9 "$mihomo_pid"
-      sleep 1
-    fi
-    log "   旧进程已停止"
-  else
-    log "   未找到运行中的 Mihomo 进程"
-  fi
-
-  # 步骤3: 启动新进程
-  log "   启动新进程..."
-  /mihomo -f "$CONFIG_FILE" &
-  local new_pid=$!
-
-  # 等待进程启动
-  sleep 3
-
-  # 步骤4: 验证启动成功
-  if kill -0 "$new_pid" 2>/dev/null; then
     log_success "Mihomo 已重启"
-    log "   新进程 PID: $new_pid"
+    log "   进程 PID: $mihomo_pid"
     return 0
   else
-    log_error "Mihomo 启动失败"
+    log_error "Mihomo 重启后未检测到进程"
     log_error "   请检查配置文件格式和 Mihomo 日志"
     return 1
   fi
