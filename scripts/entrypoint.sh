@@ -30,6 +30,19 @@ log_warning() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') ${LOG_PREFIX} ⚠️  $*"
 }
 
+# ==================== 配置 Hosts ====================
+setup_hosts() {
+  log "🔧 配置自定义 hosts..."
+
+  # 添加自定义 hosts 条目
+  if ! grep -q "s5.wook.qzz.io" /etc/hosts; then
+    echo "172.64.229.77 s5.wook.qzz.io" >> /etc/hosts
+    log_success "已添加 hosts 条目: 172.64.229.77 s5.wook.qzz.io"
+  else
+    log "ℹ️  hosts 条目已存在，跳过"
+  fi
+}
+
 # ==================== 环境变量验证 ====================
 validate_environment() {
   log "🔍 验证环境配置..."
@@ -234,25 +247,28 @@ monitor_mihomo_process() {
 
 # ==================== 主流程 ====================
 main() {
-  # 1. 验证环境
+  # 1. 配置 hosts
+  setup_hosts
+
+  # 2. 验证环境
   validate_environment
 
-  # 2. 打印启动信息
+  # 3. 打印启动信息
   print_startup_info
 
-  # 3. 生成初始配置
+  # 4. 生成初始配置
   generate_initial_config
 
-  # 4. 启动 Mihomo
+  # 5. 启动 Mihomo
   start_mihomo
 
-  # 5. 启动更新循环
+  # 6. 启动更新循环
   start_update_loop
 
-  # 6. 打印完成信息
+  # 7. 打印完成信息
   print_startup_complete
 
-  # 7. 监控主进程
+  # 8. 监控主进程
   monitor_mihomo_process
 }
 
