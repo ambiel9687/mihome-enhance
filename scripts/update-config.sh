@@ -238,59 +238,51 @@ check_if_changed() {
 apply_config() {
   log "🔄 应用新配置..."
 
-  # 原子性替换配置文件
+  # 步骤1: 原子性替换配置文件
   mv "$TEMP_FILE" "$CONFIG_FILE"
-  log "   配置文件已替换"
+  log "   配置文件已更新: $CONFIG_FILE"
 
-  # 通过 Mihomo API 热重载配置
-  log "   正在通过 API 重载配置..."
+  # 步骤2: 查找并终止旧进程
+  local mihomo_pid=$(pgrep -f "^/mihomo" | head -n 1)
 
-  local response=$(curl -s -w "\n%{http_code}" -o /tmp/api-response-$$.json \
-    -X PUT "${MIHOMO_API}/configs?force=true" \
-    -H "Authorization: Bearer ${API_SECRET}" \
-    -H "Content-Type: application/json" \
-    -d "{\"path\": \"${CONFIG_FILE}\"}" 2>/dev/null || echo -e "\n000")
+  if [ -n "$mihomo_pid" ]; then
+    log "   终止旧进程 (PID: $mihomo_pid)..."
+    kill -TERM "$mihomo_pid"
 
-  local http_code=$(echo "$response" | tail -n 1)
+    # 等待进程退出（最多5秒）
+    local timeout=5
+    while [ $timeout -gt 0 ] && kill -0 "$mihomo_pid" 2>/dev/null; do
+      sleep 1
+      timeout=$((timeout - 1))
+    done
 
-  # 清理临时文件
-  rm -f /tmp/api-response-$$.json
-
-  # 检查 API 响应
-  if [ "$http_code" = "204" ] || [ "$http_code" = "200" ]; then
-    log_success "配置已成功重载"
-    log "   API响应: HTTP $http_code"
-    return 0
-  else
-    log_error "API 重载失败"
-    log_error "   HTTP状态: $http_code"
-    log_error "   API地址: $MIHOMO_API"
-    return 1
-  fi
-}
-
-# ==================== 健康检查 ====================
-verify_health() {
-  log "🏥 验证服务健康状态..."
-
-  # 等待服务稳定
-  sleep 2
-
-  # 检查 API 是否响应
-  local health=$(curl -s -m 5 "${MIHOMO_API}/version" \
-    -H "Authorization: Bearer ${API_SECRET}" 2>/dev/null || echo "")
-
-  if [ -n "$health" ]; then
-    log_success "服务运行正常"
-    # 尝试解析版本信息（如果有）
-    local version=$(echo "$health" | grep -oP '"version":"\K[^"]+' || echo "")
-    if [ -n "$version" ]; then
-      log "   Mihomo版本: $version"
+    # 如果还没退出，强制终止
+    if kill -0 "$mihomo_pid" 2>/dev/null; then
+      log "   强制终止进程..."
+      kill -9 "$mihomo_pid"
+      sleep 1
     fi
+    log "   旧进程已停止"
+  else
+    log "   未找到运行中的 Mihomo 进程"
+  fi
+
+  # 步骤3: 启动新进程
+  log "   启动新进程..."
+  /mihomo -f "$CONFIG_FILE" &
+  local new_pid=$!
+
+  # 等待进程启动
+  sleep 3
+
+  # 步骤4: 验证启动成功
+  if kill -0 "$new_pid" 2>/dev/null; then
+    log_success "Mihomo 已重启"
+    log "   新进程 PID: $new_pid"
     return 0
   else
-    log_error "服务健康检查失败"
-    log_error "   无法连接到 API: $MIHOMO_API"
+    log_error "Mihomo 启动失败"
+    log_error "   请检查配置文件格式和 Mihomo 日志"
     return 1
   fi
 }
@@ -322,12 +314,6 @@ main() {
   if ! apply_config; then
     log_error "❌ 更新失败：配置应用错误"
     return 1
-  fi
-
-  # 步骤5: 健康检查
-  if ! verify_health; then
-    log_error "⚠️  健康检查失败，但配置已应用"
-    log_error "   请检查 Mihomo 日志排查问题"
   fi
 
   log_success "🎉 配置更新成功完成"
