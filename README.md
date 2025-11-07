@@ -119,6 +119,23 @@ docker run -d \
 
 ## 🔧 常用命令
 
+### 启动前检查（推荐）
+
+使用提供的工具脚本检查订阅地址并准备保底配置：
+
+```bash
+# 仅检查订阅地址是否可访问
+./scripts/check-subscription.sh "https://your-subscription-url"
+
+# 检查订阅地址并准备保底配置
+./scripts/check-subscription.sh "https://your-subscription-url" "./config.yaml"
+```
+
+脚本会自动：
+- 验证订阅地址可访问性
+- 如果不可访问且提供了保底配置文件，输出带保底配置的启动命令
+- 提供具体的操作建议
+
 ### 查看容器状态
 
 ```bash
@@ -265,10 +282,9 @@ docker exec -it mihome-enhance /usr/local/bin/update-config.sh
 4. 使用保底配置（当网络无法访问时）
 
 ```bash
-# 读取现有配置文件作为保底配置
+# 方式1: 从文件读取配置
 CONFIG_YAML=$(cat /path/to/config.yaml)
 
-# 使用保底配置启动容器
 docker run -d \
   --name mihome-enhance \
   -e SUBSCRIBE_URL="https://your-subscription-url" \
@@ -277,12 +293,38 @@ docker run -d \
   -p 9090:9090 \
   --restart unless-stopped \
   ghcr.io/YOUR_USERNAME/mihome-enhance:latest
+
+# 方式2: 直接在 docker-compose.yml 中配置
+version: '3.8'
+services:
+  mihomo:
+    image: ghcr.io/YOUR_USERNAME/mihome-enhance:latest
+    container_name: mihome-enhance
+    restart: unless-stopped
+    environment:
+      - SUBSCRIBE_URL=https://your-subscription-url
+      - DEFAULT_CONFIG_YAML=|
+        port: 7890
+        socks-port: 7891
+        allow-lan: true
+        mode: rule
+        log-level: info
+        proxies:
+          - name: "节点1"
+            type: ss
+            server: server.com
+            port: 443
+        # ... 其他配置
+    ports:
+      - "7890:7890"
+      - "9090:9090"
 ```
 
-**保底配置说明**：
-- 首次启动时优先尝试从订阅地址下载配置
-- 如果下载失败且设置了 `DEFAULT_CONFIG_YAML`，将使用保底配置启动
-- 保底配置需要是完整的 Mihomo/Clash 配置文件内容
+**保底配置工作流程**：
+1. 容器启动时，如果设置了 `DEFAULT_CONFIG_YAML` 且不存在配置文件，先写入保底配置
+2. 然后尝试从订阅地址下载最新配置（如果成功会覆盖保底配置）
+3. 如果下载失败，使用已写入的保底配置启动服务
+4. 确保即使网络异常也能正常启动
 
 ### API 无法访问
 
@@ -340,15 +382,16 @@ docker restart mihome-enhance
 mihomo-wok/
 ├── .github/
 │   └── workflows/
-│       └── build-image.yml    # GitHub Actions 构建流程
+│       └── build-image.yml       # GitHub Actions 构建流程
 ├── scripts/
-│   ├── entrypoint.sh          # 容器启动脚本
-│   ├── update-config.sh       # 配置更新逻辑
-│   └── update-loop.sh         # 更新循环脚本
-├── Dockerfile                 # Docker 镜像定义
-├── docker-compose.yml         # Docker Compose 配置示例
-├── .dockerignore              # Docker 构建忽略文件
-└── README.md                  # 项目文档
+│   ├── entrypoint.sh             # 容器启动脚本
+│   ├── update-config.sh          # 配置更新逻辑
+│   ├── update-loop.sh            # 更新循环脚本
+│   └── check-subscription.sh     # 订阅地址检查工具（启动前使用）
+├── Dockerfile                    # Docker 镜像定义
+├── docker-compose.yml            # Docker Compose 配置示例
+├── .dockerignore                 # Docker 构建忽略文件
+└── README.md                     # 项目文档
 ```
 
 ## 🚀 自定义构建

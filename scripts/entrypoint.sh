@@ -30,6 +30,29 @@ log_warning() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') ${LOG_PREFIX} ⚠️  $*"
 }
 
+# ==================== 准备保底配置 ====================
+prepare_default_config() {
+  # 如果设置了保底配置且配置文件不存在，则先写入保底配置
+  if [ -n "${DEFAULT_CONFIG_YAML:-}" ] && [ ! -f "$CONFIG_FILE" ]; then
+    log "📦 检测到保底配置，准备写入..."
+
+    # 确保目录存在
+    mkdir -p /data
+
+    # 写入保底配置
+    echo "$DEFAULT_CONFIG_YAML" > "$CONFIG_FILE"
+
+    if [ -f "$CONFIG_FILE" ] && [ -s "$CONFIG_FILE" ]; then
+      local size=$(stat -f%z "$CONFIG_FILE" 2>/dev/null || stat -c%s "$CONFIG_FILE")
+      log_success "保底配置已准备"
+      log "   配置文件: $CONFIG_FILE"
+      log "   文件大小: ${size} bytes"
+    else
+      log_warning "保底配置写入失败，将尝试下载订阅配置"
+    fi
+  fi
+}
+
 # ==================== 配置 Hosts ====================
 setup_hosts() {
   log "🔧 配置自定义 hosts..."
@@ -115,34 +138,13 @@ generate_initial_config() {
     if /usr/local/bin/update-config.sh; then
       log_success "初始配置已生成"
     else
-      log_warning "初始配置下载失败"
-
-      # 检查是否设置了保底配置
-      if [ -n "${DEFAULT_CONFIG_YAML:-}" ]; then
-        log "🔄 使用保底配置启动..."
-
-        # 将保底配置写入配置文件
-        echo "$DEFAULT_CONFIG_YAML" > "$CONFIG_FILE"
-
-        # 验证配置文件是否创建成功
-        if [ -f "$CONFIG_FILE" ] && [ -s "$CONFIG_FILE" ]; then
-          log_success "保底配置已应用"
-          log "   配置文件: $CONFIG_FILE"
-          local size=$(stat -f%z "$CONFIG_FILE" 2>/dev/null || stat -c%s "$CONFIG_FILE")
-          log "   文件大小: ${size} bytes"
-        else
-          log_error "保底配置写入失败"
-          exit 1
-        fi
-      else
-        log_error "未设置 DEFAULT_CONFIG_YAML 环境变量，无法使用保底配置"
-        log_error "订阅地址: ${SUBSCRIBE_URL:0:50}..."
-        log_error ""
-        log_error "解决方案："
-        log_error "1. 检查网络连接和订阅地址是否正确"
-        log_error "2. 设置 DEFAULT_CONFIG_YAML 环境变量作为保底配置"
-        exit 1
-      fi
+      log_error "初始配置下载失败"
+      log_error "订阅地址: ${SUBSCRIBE_URL:0:50}..."
+      log_error ""
+      log_error "解决方案："
+      log_error "1. 检查网络连接和订阅地址是否正确"
+      log_error "2. 设置 DEFAULT_CONFIG_YAML 环境变量作为保底配置"
+      exit 1
     fi
   else
     log "ℹ️  检测到已存在配置文件，跳过初始化"
@@ -279,28 +281,31 @@ monitor_mihomo_process() {
 
 # ==================== 主流程 ====================
 main() {
-  # 1. 配置 hosts
+  # 1. 准备保底配置（如果存在）
+  prepare_default_config
+
+  # 2. 配置 hosts
   setup_hosts
 
-  # 2. 验证环境
+  # 3. 验证环境
   validate_environment
 
-  # 3. 打印启动信息
+  # 4. 打印启动信息
   print_startup_info
 
-  # 4. 生成初始配置
+  # 5. 生成初始配置
   generate_initial_config
 
-  # 5. 启动 Mihomo
+  # 6. 启动 Mihomo
   start_mihomo
 
-  # 6. 启动更新循环
+  # 7. 启动更新循环
   start_update_loop
 
-  # 7. 打印完成信息
+  # 8. 打印完成信息
   print_startup_complete
 
-  # 8. 监控主进程
+  # 9. 监控主进程
   monitor_mihomo_process
 }
 
