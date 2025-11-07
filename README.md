@@ -85,14 +85,14 @@ docker-compose logs -f mihomo
 
 | 变量名 | 默认值             | 说明 |
 |--------|-----------------|------|
-| `UPDATE_INTERVAL` | `28800`         | 更新间隔（秒，默认8小时）|
+| `UPDATE_INTERVAL` | `21600`         | 更新间隔（秒，默认6小时）|
 | `START_PORT` | `42000`         | Socks5 起始端口 |
 | `API_SECRET` | `123456`        | Mihomo API 密钥 |
 | `AUTH_USER` | -               | Socks5 认证用户名 |
 | `AUTH_PASS` | -               | Socks5 认证密码 |
 | `CONFIG_NAME` | -               | 自定义配置名称 |
 | `LOG_LEVEL` | `info`          | 日志级别 |
-| `INITIAL_UPDATE_DELAY` | `300`           | 首次更新延迟（秒）|
+| `INITIAL_UPDATE_DELAY` | `60`            | 首次更新延迟（秒，默认1分钟）|
 | `TZ` | `Asia/Shanghai` | 时区设置 |
 | `DEFAULT_CONFIG_YAML` | -               | 保底配置（网络无法访问时使用）|
 | `SHOW_FULL_URL` | `true`          | 调试模式：显示完整URL（包含认证参数）|
@@ -103,7 +103,7 @@ docker-compose logs -f mihomo
 docker run -d \
   --name mihome-enhance \
   -e SUBSCRIBE_URL="https://your-subscription-url" \
-  -e UPDATE_INTERVAL=28800 \
+  -e UPDATE_INTERVAL=21600 \
   -e START_PORT=42000 \
   -e API_SECRET="your-secret" \
   -e AUTH_USER="user" \

@@ -29,7 +29,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
 # 环境变量配置（可通过 docker run -e 覆盖）
 # 核心配置
 ENV SUBSCRIBE_URL="" \
-    UPDATE_INTERVAL=28800 \
+    UPDATE_INTERVAL=21600 \
     START_PORT=42000 \
     API_SECRET="123456"
 
@@ -37,7 +37,7 @@ ENV SUBSCRIBE_URL="" \
 ENV AUTH_USER="" \
     AUTH_PASS="" \
     LOG_LEVEL="info" \
-    INITIAL_UPDATE_DELAY=300 \
+    INITIAL_UPDATE_DELAY=60 \
     TZ="Asia/Shanghai" \
     SHOW_FULL_URL="true"
 

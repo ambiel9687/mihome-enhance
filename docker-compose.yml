@@ -23,8 +23,8 @@ services:
       - SUBSCRIBE_URL=https://your-subscription-url-here
 
       # ===== 可选配置 =====
-      # 更新间隔（秒），默认 28800（8小时）
-      - UPDATE_INTERVAL=28800
+      # 更新间隔（秒），默认 21600（6小时）
+      - UPDATE_INTERVAL=21600
 
       # Socks5 起始端口，默认 42000
       - START_PORT=42000
@@ -42,8 +42,8 @@ services:
       # 日志级别：debug, info, warning, error
       - LOG_LEVEL=info
 
-      # 首次更新延迟（秒），默认 300（5分钟）
-      - INITIAL_UPDATE_DELAY=300
+      # 首次更新延迟（秒），默认 60（1分钟）
+      - INITIAL_UPDATE_DELAY=60
 
       # 时区设置
       - TZ=Asia/Shanghai
