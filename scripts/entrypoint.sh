@@ -63,53 +63,10 @@ setup_hosts() {
 
   log "🔧 配置自定义 hosts..."
 
-  local added_count=0
-  local skipped_count=0
-  local error_count=0
-  local new_entries=""
+  # 直接将 ENV_HOSTS 内容追加到 /etc/hosts
+  echo "$ENV_HOSTS" >> /etc/hosts
 
-  # 逐行解析 ENV_HOSTS，收集需要添加的条目
-  while IFS= read -r line || [ -n "$line" ]; do
-    # 跳过空行和注释行
-    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-
-    # 解析 IP 和 hostname
-    local ip=$(echo "$line" | awk '{print $1}')
-    local hostname=$(echo "$line" | awk '{print $2}')
-
-    # 验证格式
-    if [ -z "$ip" ] || [ -z "$hostname" ]; then
-      log_warning "无效的 hosts 条目格式（已跳过）: $line"
-      ((error_count++))
-      continue
-    fi
-
-    # 检查 hostname 是否已存在
-    if ! grep -q "$hostname" /etc/hosts; then
-      new_entries="${new_entries}${ip} ${hostname}\n"
-      log "  + 待添加: $ip $hostname"
-      ((added_count++))
-    else
-      ((skipped_count++))
-    fi
-  done <<< "$ENV_HOSTS"
-
-  # 一次性批量添加所有新条目
-  if [ $added_count -gt 0 ]; then
-    echo -e "$new_entries" >> /etc/hosts
-    log_success "已批量添加 $added_count 条 hosts 条目"
-  fi
-
-  # 打印统计信息
-  if [ $skipped_count -gt 0 ]; then
-    log "ℹ️  跳过 $skipped_count 条已存在的条目"
-  fi
-
-  if [ $error_count -gt 0 ]; then
-    log_warning "发现 $error_count 条格式错误的条目"
-  fi
-
-  log "📊 Hosts 配置完成: 新增 $added_count 条"
+  log_success "已添加自定义 hosts 条目"
 }
 
 # ==================== 环境变量验证 ====================
