@@ -55,22 +55,47 @@ prepare_default_config() {
 
 # ==================== 配置 Hosts ====================
 setup_hosts() {
+  # 检查是否设置了 ENV_HOSTS 环境变量
+  if [ -z "${ENV_HOSTS:-}" ]; then
+    log "ℹ️  未设置 ENV_HOSTS 环境变量，跳过 hosts 配置"
+    return 0
+  fi
+
   log "🔧 配置自定义 hosts..."
 
-  # 添加自定义 hosts 条目
-  if ! grep -q "s5.wook.qzz.io" /etc/hosts; then
-    echo "172.64.229.77 s5.wook.qzz.io" >> /etc/hosts
-    log_success "已添加 hosts 条目: 172.64.229.77 s5.wook.qzz.io"
-  else
-    log "ℹ️  hosts 条目 s5.wook.qzz.io 已存在，跳过"
-  fi
+  local added_count=0
+  local skipped_count=0
+  local error_count=0
 
-  if ! grep -q "url.888529.xyz" /etc/hosts; then
-    echo "172.64.229.77 url.888529.xyz" >> /etc/hosts
-    log_success "已添加 hosts 条目: 172.64.229.77 url.888529.xyz"
-  else
-    log "ℹ️  hosts 条目 url.888529.xyz 已存在，跳过"
-  fi
+  # 逐行解析 ENV_HOSTS
+  while IFS= read -r line || [ -n "$line" ]; do
+    # 跳过空行和注释行
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+    # 解析 IP 和 hostname
+    local ip=$(echo "$line" | awk '{print $1}')
+    local hostname=$(echo "$line" | awk '{print $2}')
+
+    # 验证格式
+    if [ -z "$ip" ] || [ -z "$hostname" ]; then
+      log_warning "无效的 hosts 条目格式（已跳过）: $line"
+      ((error_count++))
+      continue
+    fi
+
+    # 检查 hostname 是否已存在
+    if ! grep -q "$hostname" /etc/hosts; then
+      echo "$ip $hostname" >> /etc/hosts
+      log_success "已添加 hosts 条目: $ip $hostname"
+      ((added_count++))
+    else
+      log "ℹ️  hosts 条目 $hostname 已存在，跳过"
+      ((skipped_count++))
+    fi
+  done <<< "$ENV_HOSTS"
+
+  # 打印统计信息
+  log "📊 Hosts 配置完成: 新增 $added_count 条，跳过 $skipped_count 条，错误 $error_count 条"
 }
 
 # ==================== 环境变量验证 ====================
