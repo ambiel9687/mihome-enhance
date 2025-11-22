@@ -270,11 +270,11 @@ monitor_mihomo_process() {
 
 # ==================== 主流程 ====================
 main() {
-  # 1. 准备保底配置（如果存在）
-  prepare_default_config
-
-  # 2. 配置 hosts
+  # 1. 配置 hosts
   setup_hosts
+
+  # 2. 准备保底配置（如果存在）
+  prepare_default_config
 
   # 3. 验证环境
   validate_environment
